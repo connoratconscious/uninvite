@@ -16,15 +16,24 @@ export async function GET(req: NextRequest) {
     return new Response('Not found or expired', { status: 404 });
   }
 
-  const bytes =
-  record.data instanceof Uint8Array
-    ? record.data
-    : new Uint8Array(record.data as ArrayBufferLike);
+  // Normalize to a Uint8Array so Response accepts it
+  let bytes: Uint8Array;
+  if (record.data instanceof Uint8Array) {
+    bytes = new Uint8Array(
+      record.data.buffer,
+      record.data.byteOffset,
+      record.data.byteLength
+    );
+  } else {
+    // fallback if somehow stored as ArrayBuffer
+    bytes = new Uint8Array(record.data as ArrayBufferLike);
+  }
 
-return new Response(bytes, {
-  headers: {
-    'Content-Type': record.mime,
-    'Content-Disposition': 'attachment; filename="uninvite-full.jpg"',
-  },
-});
+  return new Response(bytes, {
+    headers: {
+      'Content-Type': record.mime,
+      'Content-Disposition': 'attachment; filename="uninvite-full.jpg"',
+      'Cache-Control': 'no-store',
+    },
+  });
 }
