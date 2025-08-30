@@ -16,16 +16,20 @@ export async function GET(req: NextRequest) {
     return new Response('Not found or expired', { status: 404 });
   }
 
-  // Always normalize to Uint8Array (no Buffer/SharedArrayBuffer unions)
-  const u8 =
+  // ✅ Normalize to a plain Uint8Array with explicit type
+  const u8: Uint8Array =
     record.data instanceof Uint8Array
       ? record.data
       : new Uint8Array(record.data as ArrayBufferLike);
 
-  // Blob accepts ArrayBufferView (Uint8Array is fine)
-  const body = new Blob([u8], { type: record.mime });
+  // ✅ Make a standalone ArrayBuffer slice (no SharedArrayBuffer union, no Buffer)
+  const ab: ArrayBuffer = u8.buffer.slice(
+    u8.byteOffset,
+    u8.byteOffset + u8.byteLength
+  ) as ArrayBuffer;
 
-  return new Response(body, {
+  // ✅ ArrayBuffer is a valid BodyInit in the Fetch spec and passes TS on Vercel
+  return new Response(ab, {
     headers: {
       'Content-Type': record.mime,
       'Content-Disposition': 'attachment; filename="uninvite-full.jpg"',
