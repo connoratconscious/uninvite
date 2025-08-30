@@ -16,17 +16,14 @@ export async function GET(req: NextRequest) {
     return new Response('Not found or expired', { status: 404 });
   }
 
-  // Normalize to Uint8Array first (covers Buffer and ArrayBufferLike)
+  // Always normalize to Uint8Array (no Buffer/SharedArrayBuffer unions)
   const u8 =
     record.data instanceof Uint8Array
       ? record.data
       : new Uint8Array(record.data as ArrayBufferLike);
 
-  // Convert to a clean ArrayBuffer slice (what Blob wants as BlobPart)
-  const arrayBuffer = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
-
-  // Now Blob is a valid BodyInit everywhere
-  const body = new Blob([arrayBuffer], { type: record.mime });
+  // Blob accepts ArrayBufferView (Uint8Array is fine)
+  const body = new Blob([u8], { type: record.mime });
 
   return new Response(body, {
     headers: {
