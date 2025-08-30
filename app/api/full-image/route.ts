@@ -16,18 +16,12 @@ export async function GET(req: NextRequest) {
     return new Response('Not found or expired', { status: 404 });
   }
 
-  // Normalize to a Uint8Array so Response accepts it
-  let bytes: Uint8Array;
-  if (record.data instanceof Uint8Array) {
-    bytes = new Uint8Array(
-      record.data.buffer,
-      record.data.byteOffset,
-      record.data.byteLength
-    );
-  } else {
-    // fallback if somehow stored as ArrayBuffer
-    bytes = new Uint8Array(record.data as ArrayBufferLike);
-  }
+  // Always re-wrap Buffer into a plain Uint8Array
+  const bytes = new Uint8Array(
+    record.data.buffer,
+    record.data.byteOffset,
+    record.data.byteLength
+  );
 
   return new Response(bytes, {
     headers: {
