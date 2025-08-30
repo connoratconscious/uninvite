@@ -16,12 +16,15 @@ export async function GET(req: NextRequest) {
     return new Response('Not found or expired', { status: 404 });
   }
 
-  return new Response(record.data, {
-    headers: {
-      'Content-Type': record.mime,
-      'Content-Disposition': 'attachment; filename="uninvite-full.jpg"',
-      // Avoid the browser prefetcher messing things up
-      'Cache-Control': 'no-store',
-    },
-  });
+  const bytes =
+  record.data instanceof Uint8Array
+    ? record.data
+    : new Uint8Array(record.data as ArrayBufferLike);
+
+return new Response(bytes, {
+  headers: {
+    'Content-Type': record.mime,
+    'Content-Disposition': 'attachment; filename="uninvite-full.jpg"',
+  },
+});
 }
