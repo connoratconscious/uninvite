@@ -16,14 +16,17 @@ export async function GET(req: NextRequest) {
     return new Response('Not found or expired', { status: 404 });
   }
 
-  // Normalize to Uint8Array
-  const bytes =
+  // Normalize to Uint8Array first (covers Buffer and ArrayBufferLike)
+  const u8 =
     record.data instanceof Uint8Array
       ? record.data
       : new Uint8Array(record.data as ArrayBufferLike);
 
-  // ✅ Wrap bytes in a Blob so Response(body) is a valid BodyInit
-  const body = new Blob([bytes], { type: record.mime });
+  // Convert to a clean ArrayBuffer slice (what Blob wants as BlobPart)
+  const arrayBuffer = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+
+  // Now Blob is a valid BodyInit everywhere
+  const body = new Blob([arrayBuffer], { type: record.mime });
 
   return new Response(body, {
     headers: {
