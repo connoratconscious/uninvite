@@ -9,10 +9,10 @@ function clamp(n: number, min: number, max: number) {
 
 // --- Trust badges as data (clean + testable) ---
 const TRUST_BADGES = [
-  { icon: '🔒', label: 'Secure Stripe' },
+  { icon: '🔒', label: 'Secure Payment' },
   { icon: '🖼️', label: 'High-res download' },
-  { icon: '🚫', label: 'No watermark' },
-  { icon: '⚡', label: 'Instant access' },
+  { icon: '🚫', label: 'No photo storage' },
+  { icon: '⚡', label: 'Rapid removal' },
 ];
 
 // --- Watermark helper (client-side) ---
@@ -291,7 +291,12 @@ export default function DeleteMyExLanding() {
   function onDrop(e: React.DragEvent<HTMLLabelElement>) {
     e.preventDefault();
     const f = e.dataTransfer.files?.[0];
-    if (f) setFile(f);
+    if (f) {
+      setFile(f);
+      try {
+        localStorage.setItem('uninvite_original_name', f.name);
+      } catch {}
+    }
   }
 
   function chooseNewFile() {
@@ -309,7 +314,7 @@ export default function DeleteMyExLanding() {
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-purple-100">
               <span className="text-lg">🗑️</span>
             </span>
-            <h1 className="text-xl font-semibold tracking-tight">Delete My Ex</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Ex-terminator</h1>
           </div>
           <nav className="flex items-center gap-6 text-sm text-zinc-600">
             <a href="#upload" className="hover:text-zinc-900">
@@ -330,14 +335,14 @@ export default function DeleteMyExLanding() {
         <div className="mx-auto max-w-6xl px-4 grid lg:grid-cols-2 gap-8 items-center py-6">
           <div>
             <h2 className="text-4xl sm:text-5xl font-extrabold leading-tight">
-              🔥 Remove people from photos instantly
+              🔥 Remove your ex from photos in seconds
             </h2>
             <ul className="mt-4 space-y-2 text-lg text-zinc-700">
               <li>✏️ Upload your photo → Tell us who to remove</li>
               <li>📸 Our AI erases them cleanly in seconds</li>
-              <li>❤️ Works best on couple shots & edge subjects</li>
+              <li>🙅‍♂️ Remove your ex and unwanted people</li>
               <li>
-                💨 Free preview. Full-res for just <strong>99p</strong>
+                💨 Free preview. Download for just <strong>99p</strong>
               </li>
             </ul>
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
@@ -449,7 +454,15 @@ export default function DeleteMyExLanding() {
             type="file"
             accept="image/*"
             className="sr-only"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              const f = e.target.files?.[0] ?? null;
+              setFile(f);
+              if (f) {
+                try {
+                  localStorage.setItem('uninvite_original_name', f.name);
+                } catch {}
+              }
+            }}
           />
         </label>
       )}
@@ -468,7 +481,7 @@ export default function DeleteMyExLanding() {
         className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-600"
       />
       <p className="mt-2 text-xs text-zinc-500">
-        ✅ Best: couples & edge · ⚠️ Harder: group shots
+        ✅ Best: pictures of couples · ⚠️ Harder: group photos
       </p>
 
       <div className="mt-6 grid sm:grid-cols-2 gap-3">
@@ -567,7 +580,7 @@ export default function DeleteMyExLanding() {
 
           <div className="mt-12 grid md:grid-cols-2 gap-6 text-left">
             <div className="rounded-xl bg-white p-6 shadow ring-1 ring-zinc-200">
-              <div className="text-lg font-semibold mb-2">How does Delete My Ex work?</div>
+              <div className="text-lg font-semibold mb-2">How does Ex-terminator work?</div>
               <p className="text-zinc-700">
                 Upload your photo, describe <span className="font-medium text-zinc-900">who to remove</span>,
                 and our AI erases them while keeping the scene natural. You always get a
@@ -615,7 +628,7 @@ export default function DeleteMyExLanding() {
       {/* Footer */}
       <footer className="bg-white border-t border-zinc-200">
         <div className="mx-auto max-w-6xl px-4 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-600">
-          <div>&copy; {new Date().getFullYear()} Delete My Ex</div>
+          <div>&copy; {new Date().getFullYear()} Ex-terminator</div>
           <nav className="flex items-center gap-4">
             <a href="#" className="hover:text-zinc-700">Privacy</a>
             <a href="#" className="hover:text-zinc-700">Terms</a>
