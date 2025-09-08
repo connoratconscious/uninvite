@@ -38,7 +38,7 @@ export default function SuccessPage({
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-purple-100">
               <span className="text-lg">🗑️</span>
             </span>
-            <span className="text-lg font-semibold tracking-tight">Delete My Ex</span>
+            <span className="text-lg font-semibold tracking-tight">Ex-terminator</span>
           </a>
           <nav className="flex items-center gap-6 text-sm text-zinc-600">
             <a href="/#upload" className="hover:text-zinc-900">Upload</a>

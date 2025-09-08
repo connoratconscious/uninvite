@@ -1,52 +1,48 @@
-import { NextRequest } from 'next/server';
-import { getImage } from '@/lib/store';
+'use client';
 
-export const runtime = 'nodejs';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
-// Safe filename helper
-function safeFileName(requested: string | null, mime: string) {
-  const ext =
-    mime === 'image/png' ? 'png' :
-    mime === 'image/webp' ? 'webp' :
-    'jpg';
+export default function SuccessPage() {
+  const sp = useSearchParams();
+  const token = sp.get('token');
+  const originalName = sp.get('name');
 
-  // remove any extension from requested, sanitize, and default
-  const baseRaw = (requested || 'photo-edited').replace(/\.[^/.]+$/, '');
-  const base = baseRaw.replace(/[^\w\-+\.]/g, '_') || 'photo-edited';
-  return `${base}.${ext}`;
-}
+  const href = token
+    ? `/api/full-image?token=${encodeURIComponent(token)}${
+        originalName ? `&name=${encodeURIComponent(originalName)}` : ''
+      }`
+    : '#';
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const token = searchParams.get('token');
-  const requestedName = searchParams.get('name') || searchParams.get('filename');
+  return (
+    <main className="mx-auto max-w-3xl px-6 py-16">
+      <div className="rounded-2xl border bg-white p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">🔥 Your edited photo is ready</h1>
+        <p className="mt-2 text-gray-600">
+          Click download to save your full-resolution image.
+        </p>
 
-  if (!token) {
-    return new Response('Missing token', { status: 400 });
-  }
+        <div className="mt-6 flex gap-3">
+          <a
+            href={href}
+            download={originalName || 'photo-edited'}
+            className="inline-flex items-center rounded-lg bg-fuchsia-600 px-5 py-3 font-medium text-white hover:bg-fuchsia-700"
+          >
+            Download edited photo
+          </a>
 
-  const record = getImage(token);
-  if (!record) {
-    return new Response('Not found or expired', { status: 404 });
-  }
+          <Link
+            href="/"
+            className="inline-flex items-center rounded-lg border px-5 py-3 font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Edit another photo
+          </Link>
+        </div>
 
-  // Normalize to plain Uint8Array and slice to a standalone ArrayBuffer
-  const u8 =
-    record.data instanceof Uint8Array
-      ? record.data
-      : new Uint8Array(record.data as ArrayBufferLike);
-
-  const ab = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) as ArrayBuffer;
-
-  const filename = safeFileName(requestedName, record.mime);
-
-  return new Response(ab, {
-    headers: {
-      'Content-Type': record.mime,
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-      Pragma: 'no-cache',
-      Expires: '0',
-    },
-  });
+        <p className="mt-4 text-xs text-gray-500">
+          For privacy, downloads are temporary. Keep a copy once saved.
+        </p>
+      </div>
+    </main>
+  );
 }
