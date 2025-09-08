@@ -1,48 +1,69 @@
-'use client';
+import { NextRequest } from 'next/server';
+import { getImage } from '@/lib/store';
 
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+export const runtime = 'nodejs';
 
-export default function SuccessPage() {
-  const sp = useSearchParams();
-  const token = sp.get('token');
-  const originalName = sp.get('name');
+function normalizeMime(m?: string | null): 'image/jpeg' | 'image/png' | 'image/webp' {
+  switch (m) {
+    case 'image/png':
+      return 'image/png';
+    case 'image/webp':
+      return 'image/webp';
+    case 'image/jpeg':
+    case 'image/jpg':
+      return 'image/jpeg';
+    default:
+      return 'image/jpeg';
+  }
+}
 
-  const href = token
-    ? `/api/full-image?token=${encodeURIComponent(token)}${
-        originalName ? `&name=${encodeURIComponent(originalName)}` : ''
-      }`
-    : '#';
+// Safe filename helper
+function safeFileName(requested: string | null, mime: string) {
+  const ext =
+    mime === 'image/png' ? 'png' :
+    mime === 'image/webp' ? 'webp' :
+    'jpg';
 
-  return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <div className="rounded-2xl border bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">🔥 Your edited photo is ready</h1>
-        <p className="mt-2 text-gray-600">
-          Click download to save your full-resolution image.
-        </p>
+  // remove any extension from requested, sanitize, and default
+  const baseRaw = (requested || 'photo-edited').replace(/\.[^/.]+$/, '');
+  const base = baseRaw.replace(/[^\w\-+\.]/g, '_') || 'photo-edited';
+  return `${base}.${ext}`;
+}
 
-        <div className="mt-6 flex gap-3">
-          <a
-            href={href}
-            download={originalName || 'photo-edited'}
-            className="inline-flex items-center rounded-lg bg-fuchsia-600 px-5 py-3 font-medium text-white hover:bg-fuchsia-700"
-          >
-            Download edited photo
-          </a>
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const token = searchParams.get('token');
+  const requestedName = searchParams.get('name') || searchParams.get('filename');
 
-          <Link
-            href="/"
-            className="inline-flex items-center rounded-lg border px-5 py-3 font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Edit another photo
-          </Link>
-        </div>
+  if (!token) {
+    return new Response('Missing token', { status: 400 });
+  }
 
-        <p className="mt-4 text-xs text-gray-500">
-          For privacy, downloads are temporary. Keep a copy once saved.
-        </p>
-      </div>
-    </main>
-  );
+  const record = getImage(token);
+  if (!record) {
+    return new Response('Not found or expired', { status: 404 });
+  }
+
+  // Normalize to plain Uint8Array and slice to a standalone ArrayBuffer
+  const u8 =
+    record.data instanceof Uint8Array
+      ? record.data
+      : new Uint8Array(record.data as ArrayBufferLike);
+
+  const ab = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) as ArrayBuffer;
+
+  const mime = normalizeMime(record.mime as string | null);
+  const filename = safeFileName(requestedName, mime);
+
+  return new Response(ab, {
+    headers: {
+      'Content-Type': mime,
+      'Content-Length': String(u8.byteLength),
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
 }
