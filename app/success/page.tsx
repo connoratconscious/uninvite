@@ -110,7 +110,6 @@ export default function SuccessPage({
             <a
               href={downloadHref}
               className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 px-6 py-3 text-white font-medium shadow hover:scale-[1.01] transition"
-              download={safeBase}
             >
               Download edited photo
             </a>

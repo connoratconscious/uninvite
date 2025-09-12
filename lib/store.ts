@@ -1,97 +1,96 @@
 // lib/store.ts
-import { put, head } from '@vercel/blob';
-
-type ImageMeta = {
-  mime: string;
-  createdAt: number;
-  originalName?: string;
-};
-
-function extFromMime(mime: string) {
-  if (mime === 'image/png') return 'png';
-  if (mime === 'image/webp') return 'webp';
-  return 'jpg';
-}
+import { put, getDownloadUrl } from '@vercel/blob';
 
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN!;
 
+function extFromMime(mime: string) {
+  return mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
+}
+
+/**
+ * Save image bytes (or just write metadata if bytes are already uploaded elsewhere).
+ * - If `existingUrl` is provided, we only write metadata JSON.
+ * - Otherwise we upload the image (private) + metadata.
+ */
 export async function saveImageToBlob(
   token: string,
-  bytes: Uint8Array,
+  bytes: Uint8Array | null,
   mime: string,
-  originalName?: string
+  originalName?: string,
+  existingUrl?: string
 ) {
   const ext = extFromMime(mime);
   const imgKey = `images/${token}.${ext}`;
   const metaKey = `images/${token}.json`;
 
-  // Convert Uint8Array → ArrayBuffer
-  const ab = toArrayBuffer(bytes);
+  // Upload image only if we don't already have it somewhere else
+  if (!existingUrl) {
+    if (!bytes) throw new Error('saveImageToBlob: bytes were null with no existingUrl');
 
-  // Upload image
-  await put(imgKey, new Blob([ab], { type: mime }), {
-    access: 'public', // Vercel Blob only supports "public"
-    contentType: mime,
-    token: BLOB_TOKEN,
-  });
+    // Normalize Uint8Array -> standalone ArrayBuffer (avoid SharedArrayBuffer issues)
+    const ab: ArrayBuffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength
+    ) as ArrayBuffer;
 
-  // Upload metadata
-  const meta: ImageMeta = { mime, createdAt: Date.now(), originalName };
-  await put(metaKey, new Blob([JSON.stringify(meta)], {
-    type: 'application/json; charset=utf-8',
-  }), {
-    access: 'public',
-    contentType: 'application/json; charset=utf-8',
-    token: BLOB_TOKEN,
-  });
-
-  return { key: imgKey, mime };
-}
-
-export async function getImageMeta(token: string): Promise<ImageMeta | null> {
-  const metaKey = `images/${token}.json`;
-  try {
-    const metaHead = await head(metaKey, { token: BLOB_TOKEN });
-    const res = await fetch(metaHead.downloadUrl, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return (await res.json()) as ImageMeta;
-  } catch {
-    return null;
+    await put(
+      imgKey,
+      new Blob([ab], { type: mime }),
+      {
+        access: 'public',
+        contentType: mime,
+        token: BLOB_TOKEN,
+      }
+    );
   }
-}
 
-export async function getImageFromBlob(
-  token: string
-): Promise<{ data: Uint8Array; mime: string; meta: ImageMeta | null } | null> {
-  const meta = await getImageMeta(token);
-  const tryExts = meta ? [extFromMime(meta.mime)] : ['jpg', 'png', 'webp'];
+  // Always (re)write metadata
+  const meta = {
+    mime,
+    originalName: originalName ?? null,
+  };
 
-  for (const ext of tryExts) {
-    const key = `images/${token}.${ext}`;
-    try {
-      const info = await head(key, { token: BLOB_TOKEN });
-      const inferredMime =
-        ext === 'png' ? 'image/png' :
-        ext === 'webp' ? 'image/webp' :
-        'image/jpeg';
-      const res = await fetch(info.downloadUrl);
-      if (!res.ok) continue;
-      const mime = res.headers.get('content-type') || meta?.mime || inferredMime;
-      const ab = await res.arrayBuffer();
-      return { data: new Uint8Array(ab), mime, meta: meta ?? null };
-    } catch {
-      continue;
+  await put(
+    metaKey,
+    new Blob([JSON.stringify(meta)], { type: 'application/json' }),
+    {
+      access: 'public',
+      contentType: 'application/json',
+      token: BLOB_TOKEN,
     }
-  }
-  return null;
+  );
+
+  return { imgKey, metaKey };
 }
 
-export function isExpired(createdAt: number, maxAgeMs = 24 * 60 * 60 * 1000) {
-  return Date.now() - createdAt > maxAgeMs;
-}
+/**
+ * Fetch the image + metadata back from Blob storage.
+ * We resolve the correct extension from metadata.mime.
+ */
+export async function getImageFromBlob(token: string): Promise<{
+  data: Uint8Array;
+  mime: string;
+  originalName: string | null;
+}> {
+  const metaKey = `images/${token}.json`;
 
-export function toArrayBuffer(u8: Uint8Array): ArrayBuffer {
-  const out = new ArrayBuffer(u8.byteLength);
-  new Uint8Array(out).set(u8);
-  return out;
+  // 1) Read metadata JSON
+  const metaUrl = await getDownloadUrl(metaKey);
+  const metaResp = await fetch(metaUrl);
+  if (!metaResp.ok) throw new Error('Metadata not found');
+
+  const meta = (await metaResp.json()) as { mime?: string; originalName?: string | null };
+  const mime = meta?.mime || 'image/jpeg';
+  const originalName = meta?.originalName ?? null;
+
+  // 2) Read image using the right extension
+  const ext = extFromMime(mime);
+  const imgKey = `images/${token}.${ext}`;
+
+  const imgUrl = await getDownloadUrl(imgKey);
+  const imgResp = await fetch(imgUrl);
+  if (!imgResp.ok) throw new Error('Image not found');
+
+  const arr = await imgResp.arrayBuffer();
+  return { data: new Uint8Array(arr), mime, originalName };
 }
