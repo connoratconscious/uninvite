@@ -1,6 +1,8 @@
 // app/api/preview/route.ts
 import { NextRequest } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { saveImageToBlob } from '@/lib/store';
+import { randomUUID } from 'crypto';
 
 export const runtime = 'nodejs';
 
@@ -8,16 +10,15 @@ function bad(msg: string, status = 400) {
   return new Response(msg, { status });
 }
 
-// ✅ Hand Response a Blob (web BodyInit) – no Buffer, no Uint8Array
+// ✅ Hand Response an ArrayBuffer (universal BodyInit) – avoids Blob/Uint8Array typing on Vercel
 function ok(bytes: Uint8Array, mime = 'image/jpeg') {
-  // Get a clean ArrayBuffer for just the view’s slice
-  const ab: ArrayBuffer =
-    (bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength)
-      ? (bytes.buffer as ArrayBuffer)
-      : bytes.slice().buffer; // copies then gives a pure ArrayBuffer
+  // Slice the underlying buffer to a standalone ArrayBuffer for exactly this view
+  const ab: ArrayBuffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
 
-  const blob = new Blob([ab], { type: mime }); // Blob is valid BodyInit
-  return new Response(blob, { headers: { 'Content-Type': mime } });
+  return new Response(ab, { headers: { 'Content-Type': mime } });
 }
 
 export async function POST(req: NextRequest) {
@@ -28,8 +29,8 @@ export async function POST(req: NextRequest) {
     if (!file || !userPrompt) return bad('Missing file or prompt');
 
     const mime = file.type || 'image/jpeg';
-    const ab = await file.arrayBuffer();
-    const base64 = Buffer.from(ab).toString('base64');
+    const fileAb = await file.arrayBuffer();
+    const base64 = Buffer.from(fileAb).toString('base64');
 
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) return bad('Server missing GOOGLE_API_KEY', 500);
@@ -61,19 +62,43 @@ export async function POST(req: NextRequest) {
     // Extract first image from response
     const parts =
       (result as any)?.response?.candidates?.[0]?.content?.parts ?? [];
-    const imgPart = parts.find((p: any) => p?.inlineData?.data)?.inlineData || null;
+    const imgPart =
+      parts.find((p: any) => p?.inlineData?.data)?.inlineData || null;
 
     if (!imgPart?.data) {
       console.error(
         'Model returned no image. Full response:',
-        JSON.stringify((result as any)?.response ?? result, null, 2)
+        JSON.stringify((result as any)?.response ?? result, null, 2),
       );
       return bad('The model did not return an image. Please try again.', 502);
     }
 
     const outMime = imgPart?.mimeType || 'image/jpeg';
-    const bytes = Buffer.from(imgPart.data, 'base64'); // already a Buffer, ok() will still handle
-    return ok(bytes, outMime);
+    const bytes = Buffer.from(imgPart.data, 'base64');
+
+    // Persist the edited image and return a token
+    const token = randomUUID();
+    try {
+      // Delegate persistence to lib/store (handles Vercel Blob or in-memory)
+      await saveImageToBlob(token, bytes, outMime, file.name || undefined);
+    } catch (e) {
+      console.error('Failed to save image:', e);
+      return bad('Could not persist preview. Please try again.', 500);
+    }
+
+    // Return bytes to render the client-side preview AND pass token via header
+    const outAb: ArrayBuffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    ) as ArrayBuffer;
+
+    return new Response(outAb, {
+      headers: {
+        'Content-Type': outMime,
+        'X-Uninvite-Token': token,
+        'Cache-Control': 'no-store',
+      },
+    });
   } catch (err: any) {
     try {
       console.error('Gemini error (raw):', err?.message || err);

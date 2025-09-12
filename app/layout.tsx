@@ -14,13 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Remove Person From Photo – AI Editor",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_BASE_URL ?? "https://removepersonfromphoto.com"
+  ),
+  title: "Remove exes, strangers, or photobombers from photos – AI Editor",
   description:
-    "Upload a photo, describe who to remove, and get a seamless AI edit. Perfect for removing exes, strangers, or anyone you’d rather forget.",
+    "Remove exes, strangers or photobombers from your pictures using AI in seconds. Upload a photo, describe who to remove, and get a seamless edit.",
   openGraph: {
-    title: "Remove Person From Photo – AI Editor",
+    title: "Remove exes, strangers, or photobombers from photos – AI Editor",
     description:
-      "Make it look like they were never there. Upload, preview, and download full-res edits.",
+      "Remove exes, strangers or photobombers from your pictures using AI in seconds. Upload, preview, and download full-res edits.",
     url: "https://removepersonfromphoto.com",
     siteName: "Remove Person From Photo",
     images: [
@@ -36,9 +39,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Remove Person From Photo – AI Editor",
+    title: "Remove exes, strangers, or photobombers from photos – AI Editor",
     description:
-      "Upload, preview, and download seamless photo edits powered by AI.",
+      "Remove exes, strangers or photobombers from your pictures using AI in seconds. Upload, preview, and download seamless photo edits.",
     images: ["/og-image.png"],
   },
   icons: {
