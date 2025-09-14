@@ -113,8 +113,10 @@ export async function GET(req: NextRequest) {
         ? maybeLocal.data
         : new Uint8Array(maybeLocal.data as ArrayBufferLike);
 
-      const ab = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
-      const body = new Blob([ab], { type: mime });
+      // Create a normal ArrayBuffer-backed copy (avoids SharedArrayBuffer issues on Vercel)
+      const copy = new Uint8Array(u8.byteLength);
+      copy.set(u8);
+      const body = new Blob([copy], { type: mime });
 
       const headers = new Headers();
       headers.set('Content-Type', mime);
@@ -122,10 +124,12 @@ export async function GET(req: NextRequest) {
       headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
       headers.set('Pragma', 'no-cache');
       headers.set('Expires', '0');
+
       if (isHead) {
-        headers.set('Content-Length', String(body.size));
+        headers.set('Content-Length', String(copy.byteLength));
         return new Response(null, { status: 200, headers });
       }
+
       return new Response(body, { headers });
     }
 
