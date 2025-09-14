@@ -3,6 +3,19 @@ import { NextRequest } from 'next/server';
 import { getImageFromBlob } from '@/lib/store';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+type LocalRecord = {
+  data: Uint8Array | ArrayBufferLike;
+  mime: string;
+  originalName: string | null;
+};
+
+type BlobRecord = {
+  downloadUrl: string; // signed URL from Vercel Blob
+  mime: string;
+  originalName: string | null;
+};
 
 // Build a safe filename
 function buildFilename(requestedBase: string | null, originalName: string | null, mime: string) {
@@ -27,7 +40,8 @@ export async function GET(req: NextRequest) {
   const t0 = Date.now();
   const url = new URL(req.url);
   const token = url.searchParams.get('token');
-  const name  = url.searchParams.get('name');
+  // Support ?name= and ?filename=
+  const requestedBase = url.searchParams.get('name') || url.searchParams.get('filename');
   const debug = url.searchParams.get('debug') === '1';
 
   if (!token) {
@@ -46,7 +60,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { mime, originalName } = record;
-    const filename = buildFilename(name, originalName ?? null, mime);
+    const filename = buildFilename(requestedBase, originalName ?? null, mime);
 
     // DEBUG path (no bytes)
     if (debug) {
@@ -61,43 +75,57 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const isHead = req.method === 'HEAD';
+
     // If we have a Vercel Blob signed URL, stream from it
-    if ('downloadUrl' in record && record.downloadUrl) {
-      const upstream = await fetch(record.downloadUrl);
-      if (!upstream.ok) {
-        console.error('Upstream fetch failed', upstream.status, await upstream.text().catch(()=>''));
+    const maybeBlob = record as Partial<BlobRecord>;
+    if (typeof maybeBlob.downloadUrl === 'string' && maybeBlob.downloadUrl.length > 0) {
+      let upstream: Response;
+      try {
+        upstream = await fetch(maybeBlob.downloadUrl, { cache: 'no-store' });
+      } catch (e) {
+        console.error('Upstream fetch threw', e);
         return new Response('Upstream fetch failed', { status: 502 });
       }
-      // Stream body through with our headers
-      return new Response(upstream.body, {
-        headers: {
-          'Content-Type': mime,
-          'Content-Disposition': `attachment; filename="${filename}"`,
-          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-          Pragma: 'no-cache',
-          Expires: '0',
-        },
-      });
+      if (!upstream.ok) {
+        console.error('Upstream fetch failed', upstream.status, await upstream.text().catch(() => ''));
+        return new Response('Upstream fetch failed', { status: 502 });
+      }
+      const headers = new Headers();
+      // Prefer upstream mime if present; otherwise our stored mime
+      headers.set('Content-Type', upstream.headers.get('content-type') || mime);
+      headers.set('Content-Disposition', `attachment; filename="${filename}"`);
+      headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      headers.set('Pragma', 'no-cache');
+      headers.set('Expires', '0');
+      const len = upstream.headers.get('content-length');
+      if (len) headers.set('Content-Length', len);
+      if (isHead) {
+        return new Response(null, { status: 200, headers });
+      }
+      return new Response(upstream.body, { headers });
     }
 
     // Otherwise use in-memory bytes (Uint8Array or ArrayBufferLike)
-    if ('data' in record && record.data) {
-      const u8 = record.data instanceof Uint8Array
-        ? record.data
-        : new Uint8Array(record.data as ArrayBufferLike);
+    const maybeLocal = record as Partial<LocalRecord>;
+    if (maybeLocal.data) {
+      const u8 = maybeLocal.data instanceof Uint8Array
+        ? maybeLocal.data
+        : new Uint8Array(maybeLocal.data as ArrayBufferLike);
 
-      // Make a standalone ArrayBuffer slice (avoid SharedArrayBuffer issues)
       const ab = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
 
-      return new Response(ab, {
-        headers: {
-          'Content-Type': mime,
-          'Content-Disposition': `attachment; filename="${filename}"`,
-          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-          Pragma: 'no-cache',
-          Expires: '0',
-        },
-      });
+      const headers = new Headers();
+      headers.set('Content-Type', mime);
+      headers.set('Content-Disposition', `attachment; filename="${filename}"`);
+      headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      headers.set('Pragma', 'no-cache');
+      headers.set('Expires', '0');
+      if (isHead) {
+        headers.set('Content-Length', String(ab.byteLength));
+        return new Response(null, { status: 200, headers });
+      }
+      return new Response(ab, { headers });
     }
 
     console.error('Record had neither downloadUrl nor data', { token });
