@@ -9,16 +9,17 @@ type SearchParams = {
   name?: string;
 };
 
-export default function SuccessPage({
+export default async function SuccessPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
-  const token = searchParams?.token ?? '';
+  const params = await searchParams;
+  const token = params?.token ?? '';
 
   // Allow overriding filename via ?name=…; otherwise default to "photo-edited"
   const safeBase =
-    (searchParams?.name ?? 'photo-edited')
+    (params?.name ?? 'photo-edited')
       // very small sanitization: keep word chars, dot, dash, underscore
       .replace(/[^\w.\-]/g, '') || 'photo-edited';
 
