@@ -114,6 +114,7 @@ export async function GET(req: NextRequest) {
         : new Uint8Array(maybeLocal.data as ArrayBufferLike);
 
       const ab = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+      const body = new Blob([ab], { type: mime });
 
       const headers = new Headers();
       headers.set('Content-Type', mime);
@@ -122,10 +123,10 @@ export async function GET(req: NextRequest) {
       headers.set('Pragma', 'no-cache');
       headers.set('Expires', '0');
       if (isHead) {
-        headers.set('Content-Length', String(ab.byteLength));
+        headers.set('Content-Length', String(body.size));
         return new Response(null, { status: 200, headers });
       }
-      return new Response(ab, { headers });
+      return new Response(body, { headers });
     }
 
     console.error('Record had neither downloadUrl nor data', { token });
