@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     siteName: "Remove Person From Photo",
     images: [
       {
-        url: "/og-image.png", // add this file in /public
+        url: "https://removepersonfromphoto.com/og-image.png",
         width: 1200,
         height: 630,
         alt: "Remove Person From Photo preview",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     title: "Remove exes, strangers, or photobombers from photos – AI Editor",
     description:
       "Remove exes, strangers or photobombers from your pictures using AI in seconds. Upload, preview, and download seamless photo edits.",
-    images: ["/og-image.png"],
+    images: ["https://removepersonfromphoto.com/og-image.png"],
   },
   icons: {
     icon: [

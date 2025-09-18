@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 
 // --- Small util used by sliders ---
 function clamp(n: number, min: number, max: number) {
@@ -99,30 +100,45 @@ function RevealSlider({
   afterSrc,
   className = '',
   initial = 50,
+  priority = false,
+  sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 50vw',
 }: {
   beforeSrc: string;
   afterSrc: string;
   className?: string;
   initial?: number;
+  priority?: boolean;
+  sizes?: string;
 }) {
   const [v, setV] = useState(initial);
 
   return (
     <div className={`relative w-full aspect-[4/3] overflow-hidden ${className}`}>
       {/* Base layer: AFTER image (always fills, below) */}
-      <SmartImage
-        src={afterSrc}
-        alt="After"
-        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-      />
+      <div className="absolute inset-0">
+        <Image
+          src={afterSrc}
+          alt="After"
+          fill
+          priority={priority}
+          fetchPriority={priority ? 'high' : undefined}
+          sizes={sizes}
+          className="object-cover select-none pointer-events-none"
+        />
+      </div>
 
       {/* Overlay layer: BEFORE image (revealed amount = slider %) */}
       <div className="absolute inset-0 overflow-hidden" style={{ width: `${v}%` }}>
-        <SmartImage
-          src={beforeSrc}
-          alt="Before"
-          className="w-full h-full object-cover select-none pointer-events-none"
-        />
+        <div className="relative h-full w-full">
+          <Image
+            src={beforeSrc}
+            alt="Before"
+            fill
+            sizes={sizes}
+            loading={priority ? 'eager' : 'lazy'}
+            className="object-cover select-none pointer-events-none"
+          />
+        </div>
       </div>
 
       {/* Split indicator at the reveal edge */}
@@ -160,16 +176,18 @@ function BeforeAfterCard({
   caption,
   chips,
   showMeta = true,
+  sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw',
 }: {
   before: string;
   after: string;
   caption: string;
   chips: string[];
   showMeta?: boolean;
+  sizes?: string;
 }) {
   return (
     <div className="rounded-xl overflow-hidden shadow ring-1 ring-zinc-200 bg-white p-3 flex flex-col">
-      <RevealSlider beforeSrc={before} afterSrc={after} />
+      <RevealSlider beforeSrc={before} afterSrc={after} sizes={sizes} />
 
       {showMeta && (
         <>
@@ -366,6 +384,8 @@ export default function DeleteMyExLanding() {
             beforeSrc="/before-image.jpg"
             afterSrc="/after-image.jpg"
             className="rounded-2xl shadow ring-1 ring-zinc-200"
+            priority
+            sizes="(max-width: 1024px) 100vw, 50vw"
           />
         </div>
       </section>
@@ -544,6 +564,7 @@ export default function DeleteMyExLanding() {
                 caption: '"ex in red dress on the left" → Solo at sunset',
                 chips: ['Couple', 'Edge'],
                 showMeta: false,
+                sizes: '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw',
               },
               {
                 before: '/proof2-before.jpg',
@@ -551,6 +572,7 @@ export default function DeleteMyExLanding() {
                 caption: '"man in white tee behind us" → Clean beach shot',
                 chips: ['Background', 'Tourist'],
                 showMeta: false,
+                sizes: '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw',
               },
               {
                 before: '/proof3-before.jpg',
@@ -558,6 +580,7 @@ export default function DeleteMyExLanding() {
                 caption: '"guy in cap on the right" → Solo portrait',
                 chips: ['Selfie', 'Edge'],
                 showMeta: false,
+                sizes: '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw',
               },
             ].map((ex) => (
               <BeforeAfterCard key={ex.caption} {...ex} />
