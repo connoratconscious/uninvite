@@ -481,7 +481,7 @@ export default function DeleteMyExLanding() {
         className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-600"
       />
       <p className="mt-2 text-xs text-zinc-500">
-        ✅ Best: pictures of couples · ⚠️ Harder: group photos
+        ✅ Best: high quality photos with 2-3 people · ⚠️ Harder: group shots and low resolution images
       </p>
 
       <div className="mt-6 grid sm:grid-cols-2 gap-3">
