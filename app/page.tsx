@@ -522,7 +522,8 @@ export default function DeleteMyExLanding() {
         ))}
       </div>
       <p className="mt-3 text-center text-[11px] text-zinc-500">
-        We auto-delete originals and results within 24h. Full details in our Privacy Policy.
+        We auto-delete originals and results within 24h. Full details in our{" "}
+        <a href="/privacy" className="underline hover:text-zinc-700">Privacy Policy</a>.
       </p>
     </div>
   </div>
@@ -615,11 +616,11 @@ export default function DeleteMyExLanding() {
           </div>
 
           <div className="mt-12 flex items-center justify-center gap-4 text-sm text-zinc-600">
-            <a href="#" className="hover:text-zinc-800">Privacy</a>
+            <a href="/privacy" className="hover:text-zinc-800">Privacy</a>
             <span>·</span>
-            <a href="#" className="hover:text-zinc-800">Terms</a>
+            <a href="/terms" className="hover:text-zinc-800">Terms</a>
             <span>·</span>
-            <a href="#" className="hover:text-zinc-800">Support</a>
+            <a href="mailto:info@removepersonfromphoto.com" className="hover:text-zinc-800">Support</a>
           </div>
         </div>
       </section>
@@ -629,9 +630,9 @@ export default function DeleteMyExLanding() {
         <div className="mx-auto max-w-6xl px-4 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-600">
           <div>&copy; {new Date().getFullYear()} Ex-terminator</div>
           <nav className="flex items-center gap-4">
-            <a href="#" className="hover:text-zinc-700">Privacy</a>
-            <a href="#" className="hover:text-zinc-700">Terms</a>
-            <a href="#" className="hover:text-zinc-700">Support</a>
+            <a href="/privacy" className="hover:text-zinc-700">Privacy</a>
+            <a href="/terms" className="hover:text-zinc-700">Terms</a>
+            <a href="mailto:info@removepersonfromphoto.com" className="hover:text-zinc-700">Support</a>
           </nav>
         </div>
       </footer>
