@@ -10,7 +10,7 @@ function clamp(n: number, min: number, max: number) {
 // --- Trust badges as data (clean + testable) ---
 const TRUST_BADGES = [
   { icon: '🔒', label: 'Secure Payment' },
-  { icon: '🖼️', label: 'High-res download' },
+  { icon: '🖼️', label: '99% accuracy' },
   { icon: '🚫', label: 'No photo storage' },
   { icon: '⚡', label: 'Rapid removal' },
 ];
@@ -356,7 +356,7 @@ export default function DeleteMyExLanding() {
                 href="#examples"
                 className="inline-flex items-center justify-center rounded-lg border border-zinc-300 px-5 py-3 font-medium hover:bg-zinc-50 transition"
               >
-                See Proof
+                See Examples
               </a>
             </div>
           </div>
@@ -609,8 +609,7 @@ export default function DeleteMyExLanding() {
               <div className="text-lg font-semibold mb-2">How long are photos stored?</div>
               <p className="text-zinc-700">
                 Previews are stored locally in your browser. For full downloads, we keep a temporary copy only long enough
-                for you to retrieve it and then delete it automatically (within 24 hours). We never use your photos to
-                train models and never share them.
+                for you to retrieve it and then delete it automatically (within 24 hours).
               </p>
             </div>
           </div>
