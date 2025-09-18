@@ -516,7 +516,7 @@ export default function DeleteMyExLanding() {
           onClick={handlePay}
           className="w-full rounded-lg border border-zinc-300 px-6 py-3 text-sm font-medium hover:bg-zinc-50 transition"
         >
-          Pay & Download
+          Download
         </button>
       </div>
 
